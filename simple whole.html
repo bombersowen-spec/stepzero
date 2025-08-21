@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Step Zero — Glassy Finance Tool</title>
+  <style>
+    :root{
+      --bg-1:#06070a; --bg-2:#0f1116; --bg-3:#141722;
+      --glass-1:rgba(255,255,255,0.08); --glass-2:rgba(255,255,255,0.04);
+      --border:rgba(255,255,255,0.12); --border-soft:rgba(255,255,255,0.08);
+      --text:#f5f5f7; --muted:#a1a1a6;
+      --inc:#32d74b; --exp:#ff453a; --acc:#0a84ff;
+      --radius:16px; --shadow:0 14px 40px rgba(0,0,0,0.45);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; color:var(--text);
+      font-family:ui-sans-serif,-apple-system,Segoe UI,Inter,Roboto,Helvetica,Arial,sans-serif;
+      min-height:100vh;
+      background:
+        radial-gradient(620px 400px at 12% 8%, #182032 0%, transparent 60%),
+        radial-gradient(480px 320px at 88% 18%, #1b2336 0%, transparent 60%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2) 60%, var(--bg-3));
+      display:flex; justify-content:flex-start; align-items:stretch;
+      padding:8px;
+    }
+    .frame{
+      width:86%; max-width:1000px; display:flex; gap:12px;
+    }
+    .panel{
+      background:linear-gradient(180deg,var(--glass-1),var(--glass-2));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      backdrop-filter:blur(20px) saturate(160%);
+      box-shadow:var(--shadow);
+      padding:12px;
+      display:flex; flex-direction:column;
+      transition:transform .2s ease, outline-color .2s ease;
+      outline:1px solid transparent;
+    }
+    .panel:hover{ outline-color:var(--border-soft); transform:translateY(-2px); }
+    .budget{ flex:1; max-width:280px; }
+    .invest{ flex:2; min-height:460px; }
+
+    h2{ margin:0 0 8px; font-weight:650; font-size:1rem; letter-spacing:.2px; }
+    .section-title{
+      font-size:.72rem; text-transform:uppercase; color:var(--muted);
+      letter-spacing:.6px; margin-top:10px; margin-bottom:4px;
+    }
+    .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:3px 0; }
+    .row label{ font-size:.9rem; }
+    .field{
+      position:relative; min-width:100px; max-width:130px; width:44%;
+      background:rgba(255,255,255,0.07);
+      border:1px solid var(--border);
+      border-radius:10px; padding:4px 6px;
+    }
+    .field.money::before{
+      content:'$'; position:absolute; left:6px; top:50%; transform:translateY(-50%);
+      color:var(--muted); font-size:.82rem; pointer-events:none;
+    }
+    input[type="number"]{
+      width:100%; border:none; outline:none; background:transparent; color:var(--text);
+      font-size:.9rem; text-align:right; appearance:textfield; padding-left:14px;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+
+    .sum{
+      margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.14);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .sum .label{ color:var(--muted); font-size:.8rem; }
+    .sum .value{ font-weight:700; color:var(--inc); }
+
+    /* Invest header + smart mode */
+    .toolbar{
+      display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;
+    }
+    .subtle{ color:var(--muted); font-size:.75rem; }
+    .toggle{ display:inline-flex; align-items:center; gap:8px; user-select:none; }
+    .toggle input{ display:none; }
+    .switch{
+      width:38px; height:20px; border-radius:999px; position:relative;
+      background:rgba(255,255,255,0.12); border:1px solid var(--border); cursor:pointer;
+      transition:background .2s ease, border-color .2s ease;
+    }
+    .switch::after{
+      content:''; position:absolute; top:1.5px; left:2px; width:17px; height:17px; border-radius:50%;
+      background:#b4b8c2; transition:transform .22s ease, background .22s ease;
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+    }
+    .toggle input:checked + .switch{ background:rgba(10,132,255,0.28); border-color:rgba(10,132,255,0.6); }
+    .toggle input:checked + .switch::after{ transform:translateX(16px); background:#0a84ff; }
+
+    /* Inputs grid + final card */
+    .inputs-grid{
+      display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+      gap:10px; margin-bottom:10px;
+    }
+    .ig-item{ display:flex; flex-direction:column; gap:4px; }
+    .ig-item label{ color:var(--muted); font-size:.78rem; }
+    .ig-item .field input:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .final-card{
+      grid-column: span 2;
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      padding:8px 10px;
+      background:linear-gradient(180deg, rgba(10,132,255,0.12), rgba(10,132,255,0.06));
+      border:1px solid rgba(10,132,255,0.36);
+      border-radius:10px;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05), 0 5px 16px rgba(10,132,255,0.14);
+    }
+    .final-main{ display:flex; flex-direction:column; }
+    .final-label{ font-size:.72rem; color:#cfe4ff; letter-spacing:.3px; text-transform:uppercase; }
+    .final-amount{ font-weight:800; font-size:1.08rem; color:#ffffff; }
+    .final-meta{ display:flex; gap:8px; font-size:.7rem; color:#dfe7ff; opacity:.9; }
+    .chip{
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.14);
+      border-radius:999px;
+      padding:2px 6px;
+    }
+
+    .chart-wrap{ display:flex; flex:1; min-height:320px; }
+    canvas{
+      flex:1; background:rgba(255,255,255,0.03);
+      border:1px solid var(--border); border-radius:10px; padding:6px;
+    }
+    .note{ color:var(--muted); font-size:.72rem; margin-top:6px; line-height:1.3; }
+
+    @media (max-width:900px){
+      .frame{ flex-direction:column; width:94%; }
+      .budget{ max-width:100%; }
+      .final-card{ grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <!-- Budget -->
+    <section class="panel budget">
+      <h2>Budget (monthly)</h2>
+      <div class="section-title" style="color:var(--inc)">Incomes</div>
+      <div class="row">
+        <label for="inc-salary">Salary</label>
+        <div class="field money"><input id="inc-salary" class="income" type="number" value="5000" min="0" inputmode="decimal"/></div>
+      </div>
+      <div class="row">
+        <label for="inc-other">Other income</label>
+        <div class="field money"><input id="inc-other" class="income" type="number" value="0" min="0" inputmode="decimal"/></div>
+      </div>
+
+      <div class="section-title" style="color:var(--exp)">Expenses</div>
+      <div class="row">
+        <label for="exp-housing">Rent/Mortgage</label>
+        <div class="field money"><input id="exp-housing" class="expense" type="number" value="1500" min="0" inputmode="decimal"/></div>
+      </div>
+      <div class="row">
+        <label for="exp-utilities">Utilities</label>
+        <div class="field money"><input id="exp-utilities" class="expense" type="number" value="200" min="0" inputmode="decimal"/></div>
+      </div>
+      <div class="row">
+        <label for="exp-food">Food</label>
+        <div class="field money"><input id="exp-food" class="expense" type="number" value="400" min="0" inputmode="decimal"/></div>
+      </div>
+      <div class="row">
+        <label for="exp-transport">Transportation</label>
+        <div class="field money"><input id="exp-transport" class="expense" type="number" value="300" min="0" inputmode="decimal"/></div>
+      </div>
+      <div class="row">
+        <label for="exp-entertainment">Entertainment</label>
+        <div class="field money"><input id="exp-entertainment" class="expense" type="number" value="150" min="0" inputmode="decimal"/></div>
+      </div>
+      <div class="row">
+        <label for="exp-other">Other</label>
+        <div class="field money"><input id="exp-other" class="expense" type="number" value="0" min="0" inputmode="decimal"/></div>
+      </div>
+
+      <div class="sum">
+        <span class="label">Available for investments</span>
+        <span class="value" id="leftoverAmount">$0.00</span>
+      </div>
+    </section>
+
+    <!-- Investment calculator -->
+    <section class="panel invest">
+      <div class="toolbar">
+        <h2>Investment calculator</h2>
+        <div class="toggle" title="Smart mode links your monthly contribution to the budget leftover">
+          <span class="subtle">Smart mode</span>
+          <input type="checkbox" id="smartMode" checked/>
+          <label for="smartMode" class="switch" aria-label="Toggle smart mode"></label>
+        </div>
+      </div>
+
+      <div class="inputs-grid">
+        <div class="ig-item">
+          <label for="initialInvestment">Initial investment ($)</label>
+          <div class="field money"><input id="initialInvestment" type="number" value="0" min="0" inputmode="decimal"/></div>
+        </div>
+        <div class="ig-item">
+          <label for="monthlyContribution">Monthly contribution ($)</label>
+          <div class="field money"><input id="monthlyContribution" type="number" value="0" min="0" inputmode="decimal"/></div>
+        </div>
+        <div class="ig-item">
+          <label for="returnRate">Expected annual return (%)</label>
+          <div class="field"><input id="returnRate" type="number" value="7" step="0.1" inputmode="decimal"/></div>
+        </div>
+        <div class="ig-item">
+          <label for="years">Number of years</label>
+          <div class="field"><input id="years" type="number" value="30" min="0" inputmode="numeric"/></div>
+        </div>
+
+        <!-- Final amount card (slightly smaller) -->
+        <div class="final-card" aria-live="polite">
+          <div class="final-main">
+            <span class="final-label">Final amount</span>
+            <span id="finalAmount" class="final-amount">$0.00</span>
+          </div>
+          <div class="final-meta">
+            <span id="finalPrincipal" class="chip">Principal: $0</span>
+            <span id="finalGrowth" class="chip">Growth: $0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="investmentChart" aria-label="Investment growth chart" role="img"></canvas>
+      </div>
+      <p class="note">
+        Quick guide: Aggressive ≈ 10%, Medium ≈ 7%, Conservative ≈ 4%. Smart mode ties monthly contribution to your budget leftover automatically.
+      </p>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Helpers
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const getNum = el => { const v = parseFloat(el.value); return Number.isFinite(v) ? v : 0; };
+    const fmtCurrency = n => '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+    // Elements
+    const smartToggle = () => $('#smartMode');
+    const monthlyInput = () => $('#monthlyContribution');
+    const initialInput = () => $('#initialInvestment');
+    const rateInput = () => $('#returnRate');
+    const yearsInput = () => $('#years');
+    const leftoverEl = () => $('#leftoverAmount');
+    const finalAmountEl = () => $('#finalAmount');
+    const finalPrincipalEl = () => $('#finalPrincipal');
+    const finalGrowthEl = () => $('#finalGrowth');
+
+    // Budget -> leftover
+    function calcLeftover(){
+      const income = $$('.income').reduce((s,i)=>s+getNum(i),0);
+      const expenses = $$('.expense').reduce((s,i)=>s+getNum(i),0);
+      return income - expenses;
+    }
+
+    function updateLeftoverUI(){
+      const leftover = calcLeftover();
+      leftoverEl().textContent = fmtCurrency(leftover);
+      return leftover;
+    }
+
+    function syncSmartMonthly(){
+      if(!smartToggle().checked) return;
+      const leftover = calcLeftover();
+      monthlyInput().value = leftover > 0 ? leftover.toFixed(2) : 0;
+    }
+
+    // Projection
+    function project(){
+      const initial = getNum(initialInput());
+      const monthly = getNum(monthlyInput());
+      const rate = getNum(rateInput()) / 100;
+      const years = Math.max(0, Math.floor(getNum(yearsInput())));
+      const months = years * 12;
+      const im = rate / 12;
+
+      let balance = initial;
+      let principal = initial;
+      const labels = [], total = [], princ = [];
+
+      if(years === 0){
+        labels.push('Year 0');
+        total.push(balance);
+        princ.push(principal);
+      } else {
+        for(let m=1; m<=months; m++){
+          balance = balance * (1 + im) + monthly;
+          principal += monthly;
+          if(m % 12 === 0){
+            const yr = m/12;
+            labels.push('Year ' + yr);
+            total.push(balance);
+            princ.push(principal);
+          }
+        }
+      }
+      return { labels, total, princ, balance, principal };
+    }
+
+    // Chart
+    let chart;
+    function initChart(){
+      const ctx = document.getElementById('investmentChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type:'line',
+        data:{ labels:[], datasets:[
+          {
+            label:'Total value',
+            data:[], borderColor:'#0a84ff',
+            backgroundColor:'rgba(10,132,255,0.18)',
+            fill:true, tension:0.25, pointRadius:0, borderWidth:2
+          },
+          {
+            label:'Principal',
+            data:[], borderColor:'#32d74b',
+            backgroundColor:'rgba(50,215,75,0.18)',
+            fill:true, tension:0.25, pointRadius:0, borderWidth:2
+          }
+        ]},
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          interaction:{ mode:'index', intersect:false },
+          plugins:{
+            legend:{ position:'bottom',
+              labels:{ color:'#e8e8ef', boxWidth:12, usePointStyle:true, pointStyle:'circle' }
+            },
+            tooltip:{
+              backgroundColor:'rgba(20,22,28,0.95)',
+              borderColor:'rgba(255,255,255,0.12)', borderWidth:1,
+              titleColor:'#fff', bodyColor:'#e8e8ef',
+              callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${fmtCurrency(ctx.parsed.y)}` }
+            }
+          },
+          scales:{
+            x:{ grid:{ color:'rgba(255,255,255,0.06)' }, ticks:{ color:'#a1a1a6' } },
+            y:{ beginAtZero:true, grid:{ color:'rgba(255,255,255,0.06)' },
+                ticks:{ color:'#a1a1a6', callback:v=>'$'+Number(v).toLocaleString() } }
+          }
+        }
+      });
+    }
+
+    // Render cycle
+    function render(){
+      // Smart link + leftover UI
+      syncSmartMonthly();
+      updateLeftoverUI();
+
+      // Projection and UI
+      const { labels, total, princ, balance, principal } = project();
+
+      // Chart
+      if(chart){
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = total;
+        chart.data.datasets[1].data = princ;
+        chart.update();
+      }
+
+      // Final card
+      finalAmountEl().textContent = fmtCurrency(balance);
+      finalPrincipalEl().textContent = 'Principal: ' + fmtCurrency(principal);
+      finalGrowthEl().textContent = 'Growth: ' + fmtCurrency(balance - principal);
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      initChart();
+
+      // Budget inputs
+      $$('.income, .expense').forEach(inp => inp.addEventListener('input', render));
+
+      // Calculator inputs
+      [initialInput(), monthlyInput(), rateInput(), yearsInput()].forEach(inp => {
+        inp.addEventListener('input', () => {
+          // If smart mode is on and user tries to type into monthly, ignore
+          if(inp === monthlyInput() && smartToggle().checked) return;
+          render();
+        });
+      });
+
+      // Smart mode toggle
+      smartToggle().addEventListener('change', () => {
+        monthlyInput().disabled = smartToggle().checked;
+        render();
+      });
+
+      // Initial state
+      monthlyInput().disabled = smartToggle().checked;
+      render();
+    });
+
+    // Keep chart responsive
+    window.addEventListener('resize', () => chart && chart.resize());
+  </script>
+</body>
+</html>
